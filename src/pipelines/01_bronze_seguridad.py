@@ -7,7 +7,9 @@ import pandas as pd
 import os
 import logging
 from datetime import datetime
+from pathlib import Path
 
+os.chdir(Path(__file__).resolve().parents[2])
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
     filename=f"logs/01_bronze_seguridad_{datetime.today().strftime('%Y%m%d')}.log",

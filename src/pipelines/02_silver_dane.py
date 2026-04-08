@@ -16,7 +16,9 @@ import numpy as np
 import os
 import logging
 from datetime import datetime
+from pathlib import Path
 
+os.chdir(Path(__file__).resolve().parents[2])
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
     filename=f"logs/02_silver_{datetime.today().strftime('%Y%m%d')}.log",
@@ -29,7 +31,9 @@ SILVER_PATH = os.path.join("data", "silver")
 os.makedirs(SILVER_PATH, exist_ok=True)
 
 if not os.path.exists(BRONZE_PATH):
-    raise FileNotFoundError("❌ Ejecuta primero 01_bronze_dane.py")
+    raise FileNotFoundError(
+        "❌ Ejecuta primero src/pipelines/01_bronze_dane.py (desde la raíz del repositorio)"
+    )
 
 df = pd.read_parquet(BRONZE_PATH)
 print(f"✅ Bronze cargado: {df.shape}")

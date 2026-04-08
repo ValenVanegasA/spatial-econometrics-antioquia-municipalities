@@ -7,7 +7,9 @@ import pandas as pd
 import os
 import logging
 from datetime import datetime
+from pathlib import Path
 
+os.chdir(Path(__file__).resolve().parents[2])
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
     filename=f"logs/01_bronze_{datetime.today().strftime('%Y%m%d')}.log",
@@ -32,7 +34,6 @@ df = pd.read_excel(
     header=3,          # fila 4 en Excel = índice 3 en Python
     engine="openpyxl"
 )
-
 print(f"✅ Shape cargado: {df.shape}")
 print("\n📌 Columnas detectadas:")
 for i, col in enumerate(df.columns):
@@ -44,5 +45,20 @@ print(df.head(3).to_string())
 df.to_parquet(os.path.join(BRONZE_PATH, "dane_bronze.parquet"), index=False)
 df.to_csv(os.path.join(BRONZE_PATH, "dane_bronze.csv"), index=False, encoding="utf-8-sig")
 
-logging.info(f"Bronze guardado: {df.shape}")
+# --- cargar hoja poblacion ---
+# El header exacto es la fila 3 (index 2) que contiene DPMP, Municipio, y los años
+df_pob = pd.read_excel(
+    RAW_PATH,
+    sheet_name="POBLACION",
+    header=2,          
+    engine="openpyxl"
+)
+print(f"✅ Shape Población cargado: {df_pob.shape}")
+
+# --- guardar bronze de poblacion ---
+df_pob.to_parquet(os.path.join(BRONZE_PATH, "poblacion_bronze.parquet"), index=False)
+df_pob.to_csv(os.path.join(BRONZE_PATH, "poblacion_bronze.csv"), index=False, encoding="utf-8-sig")
+
+logging.info(f"Bronze VA guardado: {df.shape}")
+logging.info(f"Bronze Poblacion guardado: {df_pob.shape}")
 print("\n✅ BRONZE COMPLETADO")

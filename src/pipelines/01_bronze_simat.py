@@ -7,10 +7,12 @@ import pandas as pd
 import os
 import logging
 from datetime import datetime
+from pathlib import Path
 
+os.chdir(Path(__file__).resolve().parents[2])
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
-    filename=f"logs/02_bronze_simat_{datetime.today().strftime('%Y%m%d')}.log",
+    filename=f"logs/01_bronze_simat_{datetime.today().strftime('%Y%m%d')}.log",
     level=logging.INFO,
     format="%(asctime)s — %(levelname)s — %(message)s"
 )

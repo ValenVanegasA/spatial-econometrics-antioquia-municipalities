@@ -17,7 +17,9 @@ import numpy as np
 import os
 import logging
 from datetime import datetime
+from pathlib import Path
 
+os.chdir(Path(__file__).resolve().parents[2])
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
     filename=f"logs/gold_panel_{datetime.today().strftime('%Y%m%d')}.log",
@@ -36,10 +38,12 @@ os.makedirs(GOLD_PATH, exist_ok=True)
 dane = pd.read_parquet(os.path.join(SILVER_PATH, "dane_silver.parquet"))
 seg  = pd.read_parquet(os.path.join(SILVER_PATH, "seguridad_silver.parquet"))
 sim  = pd.read_parquet(os.path.join(SILVER_PATH, "simat_silver.parquet"))
+pobl = pd.read_parquet(os.path.join(SILVER_PATH, "poblacion_silver.parquet"))
 
 print(f"✅ Silver DANE      : {dane.shape}")
 print(f"✅ Silver Seguridad : {seg.shape}")
 print(f"✅ Silver SIMAT     : {sim.shape}")
+print(f"✅ Silver Población : {pobl.shape}")
 
 # =============================================================
 # PASO 2 — Panel base: DANE es el ancla
@@ -49,13 +53,36 @@ panel = dane[["cod_mpio", "municipio", "subregion", "year",
               "va_total", "ln_va_total"]].copy()
 
 # =============================================================
-# PASO 3 — Merge seguridad (homicidios)
+# PASO 3 — Merge población y crear métricas per cápita
+# =============================================================
+
+panel = panel.merge(pobl[["cod_mpio", "year", "poblacion"]],
+                    on=["cod_mpio", "year"], how="left")
+
+# Calcular VA per cápita (va_total viene en miles de millones COP)
+# Multiplicamos por 1,000 para que el va_per_capita quede en Millones de COP por persona
+panel["va_per_capita"] = (panel["va_total"] * 1_000) / panel["poblacion"]
+panel["ln_va_per_capita"] = np.log(panel["va_per_capita"].clip(lower=0.001))
+panel["ln_poblacion"] = np.log(panel["poblacion"].clip(lower=1))
+
+print(f"\n✅ Merge población: {panel.shape}")
+
+# =============================================================
+# PASO 3B — Merge seguridad (homicidios)
 # =============================================================
 
 panel = panel.merge(seg[["cod_mpio", "year", "homicidios"]],
                     on=["cod_mpio", "year"], how="left")
 panel["homicidios"] = panel["homicidios"].fillna(0).astype(int)
 print(f"\n✅ Merge seguridad: {panel.shape}")
+
+# Tasa de homicidios por 100,000 habitantes
+# Necesaria para comparar municipios de distinto tamaño (Medellín vs municipio pequeño)
+panel["tasa_homicidios"] = np.where(
+    panel["poblacion"] > 0,
+    panel["homicidios"] / panel["poblacion"] * 100_000,
+    np.nan
+)
 
 # =============================================================
 # PASO 4 — Merge SIMAT (cobertura secundaria)
@@ -107,7 +134,8 @@ print(f"   Estado             : {'✅ BALANCEADO' if n_obs == n_esperado else '�
 # PASO 7 — Estadísticas descriptivas
 # =============================================================
 
-cols_desc = ["va_total", "ln_va_total", "homicidios", "cobertura_secundaria"]
+cols_desc = ["va_total", "ln_va_total", "poblacion", "ln_poblacion", "va_per_capita",
+             "ln_va_per_capita", "tasa_homicidios", "cobertura_secundaria"]
 print("\n" + "="*55)
 print("  ESTADÍSTICAS DESCRIPTIVAS — GOLD PANEL")
 print("="*55)
